@@ -27,7 +27,17 @@ const target = join(outputDir, 'POST.json');
 try {
   mkdirSync(outputDir, { recursive: true });
   const bytes = readFileSync(source);
+  // The house reads the post's address out of this file, so refuse to hand
+  // it a file that is not an address: the JSON must carry a string `url`.
+  const parsed = JSON.parse(bytes.toString('utf8')) as unknown;
+  if (typeof parsed !== 'object' || parsed === null || typeof (parsed as { url?: unknown }).url !== 'string') {
+    throw new Error(`${source} does not hold a JSON object with a string url`);
+  }
   writeFileSync(target, bytes);
+  // Confirm the copy is exact before reporting success.
+  if (!readFileSync(target).equals(bytes)) {
+    throw new Error(`${target} differs from ${source} after copying`);
+  }
 } catch (error) {
   console.error(`Could not copy ${source} to ${target}: ${(error as Error).message}`);
   process.exit(1);
